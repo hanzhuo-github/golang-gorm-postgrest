@@ -15,7 +15,6 @@ func init() {
 	if err != nil {
 		log.Fatal("? Could not load environment variables", err)
 	}
-	fmt.Print(config)
 
 	initializers.ConnectDB(&config)
 }
