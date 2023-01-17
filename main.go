@@ -4,12 +4,20 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/hanzhuo-github/golang-gorm-postgres/controllers"
 	"github.com/hanzhuo-github/golang-gorm-postgres/initializers"
+	"github.com/hanzhuo-github/golang-gorm-postgres/routes"
 )
 
 var (
-	server *gin.Engine
+	server              *gin.Engine
+	AuthController      controllers.AuthController
+	AuthRouteController routes.AuthRouteController
+
+	UserController      controllers.UserController
+	UserRouteController routes.UserRouteController
 )
 
 // 1. Load the environment variables
@@ -23,6 +31,12 @@ func init() {
 
 	initializers.ConnectDB(&config)
 
+	AuthController = controllers.NewAuthController(initializers.DB)
+	AuthRouteController = routes.NewAuthRouteController(AuthController)
+
+	UserController = controllers.NewUserController(initializers.DB)
+	UserRouteController = routes.NewRouteUserController(UserController)
+
 	server = gin.Default()
 }
 
@@ -31,6 +45,12 @@ func main() {
 	if err != nil {
 		log.Fatal("? Could not load environment variables", err)
 	}
+
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowOrigins = []string{"http://localhost:8000", config.ClientOrigin}
+	corsConfig.AllowCredentials = true
+
+	server.Use(cors.New(corsConfig))
 
 	// Create a new route group.
 	// This approach enable us to group all the routes
@@ -42,6 +62,9 @@ func main() {
 		message := "Welcome to Golang with Gorm and Postgres"
 		ctx.JSON(http.StatusOK, gin.H{"status": "success", "message": message})
 	})
+
+	AuthRouteController.AuthRoute(router)
+	UserRouteController.UserRoute(router)
 
 	// Evoke Run method to attach the route to the http.Server
 	// This enable the router to start listening and serving HTTP requests.
